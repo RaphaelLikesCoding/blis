@@ -146,7 +146,13 @@ export function reduce(log, opts = {}) {
 
     switch (event.type) {
       case EventType.LEAGUE_CONFIGURED:
-        Object.assign(state.config, event.payload);
+        // Merge only values that are actually present. A config event derived
+        // from the draft room describes the league, not you -- letting its
+        // null myTeamId overwrite yours would silently disable your max-bid
+        // cap, the no-slot verdict and the whole target plan.
+        for (const [key, value] of Object.entries(event.payload)) {
+          if (value !== null && value !== undefined) state.config[key] = value;
+        }
         // Resize existing teams' slot arrays to the new roster shape.
         for (const team of state.teams.values()) {
           const filled = team.slots.filter((s) => s.filled);

@@ -149,3 +149,59 @@ button.danger { color: var(--bad); }
 }
 .alert.review { border-left-color: var(--bad); }
 .alert button { margin-left: 6px; padding: 1px 6px; font-size: 10px; }
+
+/* --- targets --------------------------------------------------------------
+   The board is edited in place: every price and tier cell is a live input, so
+   retuning a number mid-draft is one click rather than a dialog. */
+
+.tierbadge {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: var(--line);
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.tierbadge.critical { background: var(--warn); color: #fff; }
+.tierbadge.gone { background: var(--bad); color: #fff; }
+
+table.targets td { padding: 2px 6px; }
+table.targets input.price,
+table.targets input.tier {
+  width: 100%;
+  padding: 2px 4px;
+  text-align: right;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  font-variant-numeric: tabular-nums;
+}
+table.targets input.tier { max-width: 34px; }
+table.targets input.price { max-width: 52px; }
+table.targets input:focus { border-color: var(--accent); outline: none; }
+table.targets input:disabled { background: transparent; border-color: transparent; color: var(--muted); }
+
+table.targets tr.won { background: color-mix(in srgb, var(--good) 12%, transparent); }
+table.targets tr.lost td { color: var(--muted); }
+table.targets tr.lost td:first-child { text-decoration: line-through; }
+
+.tag { font-size: 10px; padding: 1px 5px; border-radius: 3px; white-space: nowrap; }
+.tag.won { background: var(--good); color: #fff; }
+.tag.lost { background: var(--line); color: var(--muted); }
+
+.eff { font-size: 10px; color: var(--accent); margin-left: 3px; }
+
+button.drop {
+  padding: 0 5px;
+  line-height: 1.2;
+  color: var(--muted);
+  border-color: transparent;
+  background: none;
+}
+button.drop:hover { color: var(--bad); border-color: var(--bad); }
+
+.target-line { color: var(--accent); font-weight: 500; }
+label.inline { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); }

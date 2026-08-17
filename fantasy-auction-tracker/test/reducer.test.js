@@ -212,3 +212,24 @@ test('event validation catches every required field', () => {
   const problems = validate(makeEvent(EventType.SOLD, { price: -1 }));
   assert.ok(problems.length >= 4);
 });
+
+test('a league config event does not erase your own team identity', () => {
+  // Draft rooms emit league settings that know nothing about which team is
+  // yours. A null in that payload must not clobber a value you set.
+  const state = reduce([
+    makeEvent(EventType.LEAGUE_CONFIGURED, {
+      numTeams: 12, budget: 200, rosterSlots: config.rosterSlots, myTeamId: null,
+    }, { id: 'e1' }),
+  ], { config: { ...config, myTeamId: 'me' } });
+
+  assert.equal(state.config.myTeamId, 'me');
+  assert.equal(state.config.numTeams, 12, 'real values still apply');
+});
+
+test('a league config event can still change a setting to a real value', () => {
+  const state = reduce([
+    makeEvent(EventType.LEAGUE_CONFIGURED, { myTeamId: 'someone-else' }, { id: 'e1' }),
+  ], { config: { ...config, myTeamId: 'me' } });
+
+  assert.equal(state.config.myTeamId, 'someone-else');
+});

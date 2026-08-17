@@ -16,6 +16,9 @@
 import { allTeamSummaries } from './reducer.js';
 import { startersByPosition, slotAccepts, rosterSize } from './config.js';
 import { POSITIONS, playerKey } from './players.js';
+import {
+  targetFor, effectivePrice, tierPressure, planFeasibility, targetStatus,
+} from './targets.js';
 
 /**
  * playerKey -> valuation, cached per valuation array.
@@ -200,7 +203,11 @@ export function liveBidders(state, position, { excludeTeamId = null } = {}) {
  * alternative to overpaying is a materially worse roster. Both are hard-capped
  * by what you can legally bid.
  */
-export function bidAdvice(state, valuations, { aggressiveness = 0.5 } = {}) {
+export function bidAdvice(state, valuations, {
+  aggressiveness = 0.5,
+  targets = [],
+  autoAdjustTargets = false,
+} = {}) {
   const nom = state.nomination;
   if (!nom) return null;
 
@@ -213,9 +220,28 @@ export function bidAdvice(state, valuations, { aggressiveness = 0.5 } = {}) {
   const rivals = liveBidders(state, nom.position, { excludeTeamId: config.myTeamId });
 
   const parValue = val?.value ?? 0;
-  const adjusted = parValue * inf.discretionary;
-  const walkAway = Math.round(adjusted);
-  const rawCeiling = adjusted + aggressiveness * Math.max(0, cliff.cliff);
+  const marketValue = parValue * inf.discretionary;
+
+  // An explicit price target is the user's own number and outranks anything
+  // derived from the CSV -- that is the whole point of setting one. The market
+  // figure is still reported alongside so divergence is visible rather than
+  // silently overridden.
+  const target = targetFor(targets, nom.playerKey);
+  const targetPrice = target
+    ? effectivePrice(target, {
+      parValue, inflation: inf.discretionary, autoAdjust: autoAdjustTargets,
+    })
+    : null;
+
+  const basis = targetPrice != null ? targetPrice : marketValue;
+  const walkAway = Math.round(basis);
+
+  // A target's price is a ceiling you chose, so the cliff allowance does not
+  // get to push past it. Without a target, the cliff is what justifies going
+  // over par on a thin position.
+  const rawCeiling = targetPrice != null
+    ? targetPrice
+    : basis + aggressiveness * Math.max(0, cliff.cliff);
 
   const iCanFit = me
     ? me.slots.some((s) => !s.filled && slotAccepts(s.type, nom.position))
@@ -224,7 +250,7 @@ export function bidAdvice(state, valuations, { aggressiveness = 0.5 } = {}) {
   const ceiling = Math.max(0, Math.min(Math.round(rawCeiling), myMax));
 
   let verdict;
-  if (!val) verdict = 'unvalued';
+  if (!val && !target) verdict = 'unvalued';
   else if (!iCanFit) verdict = 'no-slot';
   else if (nom.highBid >= ceiling) verdict = 'pass';
   else if (nom.highBid < walkAway) verdict = 'bid';
@@ -236,10 +262,10 @@ export function bidAdvice(state, valuations, { aggressiveness = 0.5 } = {}) {
     currentBid: nom.highBid,
     highBidder: nom.highBidder,
     parValue,
-    adjustedValue: Math.round(adjusted * 10) / 10,
+    adjustedValue: Math.round(marketValue * 10) / 10,
     walkAway,
     ceiling,
-    surplus: Math.round((adjusted - nom.highBid) * 10) / 10,
+    surplus: Math.round((basis - nom.highBid) * 10) / 10,
     tierCliff: Math.round(cliff.cliff * 10) / 10,
     nextBest: cliff.next?.name ?? null,
     inflation: Math.round(inf.discretionary * 100) / 100,
@@ -248,6 +274,13 @@ export function bidAdvice(state, valuations, { aggressiveness = 0.5 } = {}) {
     topRival: rivals[0] ?? null,
     /** Rivals who could still take this player away from you at `ceiling`. */
     threats: rivals.filter((r) => r.maxBid > nom.highBid).length,
+    /** Set when the player is on your board. */
+    isTarget: Boolean(target),
+    targetTier: target?.tier ?? null,
+    targetPrice,
+    targetNote: target?.note || null,
+    /** How far your target sits from the market read, in dollars. */
+    targetVsMarket: targetPrice != null ? Math.round(targetPrice - marketValue) : null,
     verdict,
   };
 }
@@ -273,7 +306,27 @@ export function budgetPressure(state) {
 
 /** One call for the whole sidebar, so the UI never assembles analytics itself. */
 export function snapshot(state, valuations, opts = {}) {
+  const targets = opts.targets ?? [];
+  const inf = inflation(state, valuations);
   return {
+    tiers: tierPressure(state, targets),
+    plan: planFeasibility(state, targets, {
+      valuations,
+      inflation: inf.discretionary,
+      autoAdjust: opts.autoAdjustTargets ?? false,
+    }),
+    // The board with live status plus the price actually in force, so the
+    // Targets tab shows what auto-adjust is doing rather than the raw input.
+    targetBoard: targetStatus(state, targets).map((t) => ({
+      ...t,
+      parValue: valuationFor(valuations, t.key)?.value ?? null,
+      effective: effectivePrice(t, {
+        parValue: valuationFor(valuations, t.key)?.value ?? null,
+        inflation: inf.discretionary,
+        autoAdjust: opts.autoAdjustTargets ?? false,
+      }),
+    })),
+    autoAdjustTargets: opts.autoAdjustTargets ?? false,
     teams: allTeamSummaries(state).map((t) => ({
       teamId: t.teamId,
       teamName: t.teamName,
@@ -284,7 +337,7 @@ export function snapshot(state, valuations, opts = {}) {
       needs: t.needs,
       roster: t.roster,
     })),
-    inflation: inflation(state, valuations),
+    inflation: inf,
     scarcity: scarcity(state, valuations),
     pressure: budgetPressure(state),
     advice: bidAdvice(state, valuations, opts),

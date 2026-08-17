@@ -1,0 +1,110 @@
+[
+  {
+    "name": "Jordan Hall WR7",
+    "position": "WR",
+    "tier": 1,
+    "maxPrice": 43
+  },
+  {
+    "name": "Zay Parsons RB7",
+    "position": "RB",
+    "tier": 1,
+    "maxPrice": 40
+  },
+  {
+    "name": "Rome Collins RB8",
+    "position": "RB",
+    "tier": 1,
+    "maxPrice": 38
+  },
+  {
+    "name": "Garrett Corum WR9",
+    "position": "WR",
+    "tier": 1,
+    "maxPrice": 34
+  },
+  {
+    "name": "Garrett Johnston RB10",
+    "position": "RB",
+    "tier": 1,
+    "maxPrice": 32
+  },
+  {
+    "name": "Blake Shakir WR12",
+    "position": "WR",
+    "tier": 1,
+    "maxPrice": 31
+  },
+  {
+    "name": "Bijan Kincaid WR11",
+    "position": "WR",
+    "tier": 2,
+    "maxPrice": 30
+  },
+  {
+    "name": "Sam Kupp QB1",
+    "position": "QB",
+    "tier": 2,
+    "maxPrice": 29
+  },
+  {
+    "name": "Marvin Odunze WR14",
+    "position": "WR",
+    "tier": 2,
+    "maxPrice": 28
+  },
+  {
+    "name": "Rome London RB15",
+    "position": "RB",
+    "tier": 2,
+    "maxPrice": 25
+  },
+  {
+    "name": "Justin Samuel WR17",
+    "position": "WR",
+    "tier": 2,
+    "maxPrice": 24
+  },
+  {
+    "name": "Blake Nacua QB2",
+    "position": "QB",
+    "tier": 2,
+    "maxPrice": 24
+  },
+  {
+    "name": "Marvin Bowers WR15",
+    "position": "WR",
+    "tier": 3,
+    "maxPrice": 24
+  },
+  {
+    "name": "Justin Nacua WR16",
+    "position": "WR",
+    "tier": 3,
+    "maxPrice": 23
+  },
+  {
+    "name": "Khalil Harrison WR19",
+    "position": "WR",
+    "tier": 3,
+    "maxPrice": 21
+  },
+  {
+    "name": "Marvin Wilson RB18",
+    "position": "RB",
+    "tier": 3,
+    "maxPrice": 20
+  },
+  {
+    "name": "Chris Rice QB3",
+    "position": "QB",
+    "tier": 3,
+    "maxPrice": 19
+  },
+  {
+    "name": "Quentin Corum TE4",
+    "position": "TE",
+    "tier": 3,
+    "maxPrice": 19
+  }
+]

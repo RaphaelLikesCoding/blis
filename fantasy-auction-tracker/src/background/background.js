@@ -11,12 +11,15 @@ import { DraftStore } from '../core/store.js';
 import { EventType } from '../core/events.js';
 import { snapshot } from '../core/analytics.js';
 import { loadValuations, rescaleToLeague } from '../core/valuations.js';
+import { buildTargets, seedFromValuations } from '../core/targets.js';
 import { DEFAULT_CONFIG } from '../core/config.js';
 
 const STORAGE_KEY = 'draft:current';
 
 let store = new DraftStore({ config: DEFAULT_CONFIG });
 let valuations = [];
+let targets = [];
+let autoAdjustTargets = false;
 let status = { profileId: null, tap: false, lastEventAt: null, source: null };
 
 /** Persist on a timer rather than per-event; a hot auction fires in bursts. */
@@ -33,7 +36,9 @@ function schedulePersist() {
 }
 
 async function restore() {
-  const saved = await browser.storage.local.get([STORAGE_KEY, 'valuationsCsv', 'config']);
+  const saved = await browser.storage.local.get([
+    STORAGE_KEY, 'valuationsCsv', 'config', 'targets', 'autoAdjustTargets',
+  ]);
   const config = { ...DEFAULT_CONFIG, ...(saved.config ?? {}) };
 
   if (saved[STORAGE_KEY]?.log?.length) {
@@ -43,6 +48,10 @@ async function restore() {
   }
 
   if (saved.valuationsCsv) applyValuations(saved.valuationsCsv, config);
+  // Targets are the user's own work, so they are restored verbatim rather
+  // than re-seeded from the CSV, which would silently discard hand edits.
+  targets = buildTargets(saved.targets ?? []);
+  autoAdjustTargets = saved.autoAdjustTargets ?? false;
   store.subscribe(() => schedulePersist());
 }
 
@@ -57,6 +66,8 @@ function currentSnapshot() {
   return {
     ...snapshot(store.state, valuations, {
       aggressiveness: store.baseConfig.aggressiveness ?? 0.5,
+      targets,
+      autoAdjustTargets,
     }),
     config: store.baseConfig,
     valuationCount: valuations.length,
@@ -129,6 +140,31 @@ browser.runtime.onMessage.addListener((msg, sender) => {
       const result = store.correct(msg.targetId, msg.patch);
       broadcast();
       return Promise.resolve(result);
+    }
+
+    case 'set-targets': {
+      targets = buildTargets(msg.targets ?? []);
+      browser.storage.local.set({ targets });
+      broadcast();
+      return Promise.resolve({ ok: true, count: targets.length });
+    }
+
+    case 'seed-targets': {
+      // Merge rather than replace: seeding is meant to fill an empty board or
+      // top it up, never to wipe prices you have already tuned.
+      const seeded = seedFromValuations(valuations, msg.options ?? {});
+      const existing = new Map(targets.map((t) => [t.key, t]));
+      targets = buildTargets([...seeded, ...existing.values()]);
+      browser.storage.local.set({ targets });
+      broadcast();
+      return Promise.resolve({ ok: true, count: targets.length });
+    }
+
+    case 'set-auto-adjust': {
+      autoAdjustTargets = Boolean(msg.value);
+      browser.storage.local.set({ autoAdjustTargets });
+      broadcast();
+      return Promise.resolve({ ok: true });
     }
 
     case 'reset':

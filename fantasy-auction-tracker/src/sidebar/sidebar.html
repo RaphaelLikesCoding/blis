@@ -13,6 +13,7 @@
 
   <nav class="tabs" role="tablist">
     <button class="tab active" data-panel="live" role="tab">Live</button>
+    <button class="tab" data-panel="targets" role="tab">Targets</button>
     <button class="tab" data-panel="teams" role="tab">Teams</button>
     <button class="tab" data-panel="market" role="tab">Market</button>
     <button class="tab" data-panel="setup" role="tab">Setup</button>
@@ -31,6 +32,25 @@
     </table>
 
     <div id="alerts"></div>
+  </section>
+
+  <!-- TARGETS -->
+  <section id="panel-targets" class="panel">
+    <div id="plan" class="card"></div>
+
+    <div class="row">
+      <button id="add-target">Add target</button>
+      <button id="seed-targets">Seed from CSV</button>
+      <label class="inline">
+        <input type="checkbox" id="auto-adjust"> adjust for inflation
+      </label>
+    </div>
+    <p class="hint">
+      Prices are yours: an explicit target overrides the market-derived ceiling
+      on the Live tab. Edit any cell below and it saves immediately.
+    </p>
+
+    <div id="tiers"></div>
   </section>
 
   <!-- TEAMS -->

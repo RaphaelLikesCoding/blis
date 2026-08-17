@@ -16,6 +16,7 @@ import { DraftStore } from '../src/core/store.js';
 import { EventType } from '../src/core/events.js';
 import { loadValuations, rescaleToLeague } from '../src/core/valuations.js';
 import { inflation, scarcity, budgetPressure, bidAdvice } from '../src/core/analytics.js';
+import { buildTargets, tierPressure, planFeasibility, targetStatus } from '../src/core/targets.js';
 import { allTeamSummaries } from '../src/core/reducer.js';
 
 const money = (n) => `$${Math.round(n)}`;
@@ -49,19 +50,29 @@ function main() {
   const [logPath, csvPath] = process.argv.slice(2).filter((a) => !a.startsWith('--'));
   const atFlag = process.argv.indexOf('--at');
   const until = atFlag !== -1 ? Number(process.argv[atFlag + 1]) : Infinity;
+  const targetsFlag = process.argv.indexOf('--targets');
+  const targetsPath = targetsFlag !== -1 ? process.argv[targetsFlag + 1] : null;
+  const meFlag = process.argv.indexOf('--me');
+  const myTeamId = meFlag !== -1 ? process.argv[meFlag + 1] : null;
 
   if (!logPath) {
-    console.error('usage: node tools/replay.js <draft-log.json> [values.csv] [--at N]');
+    console.error('usage: node tools/replay.js <draft-log.json> [values.csv] '
+      + '[--at N] [--targets targets.json] [--me <team-id>]');
     process.exit(1);
   }
 
   const logData = JSON.parse(readFileSync(logPath, 'utf8'));
+  if (myTeamId) logData.config = { ...logData.config, myTeamId };
   let valuations = [];
   if (csvPath) {
     const { players, problems } = loadValuations(readFileSync(csvPath, 'utf8'));
     valuations = rescaleToLeague(players, logData.config);
     if (problems.length) console.error(`csv notes: ${problems.join('; ')}`);
   }
+
+  const targets = targetsPath
+    ? buildTargets(JSON.parse(readFileSync(targetsPath, 'utf8')))
+    : [];
 
   const { store, timeline } = replay(logData, valuations, { until });
   const state = store.state;
@@ -112,6 +123,34 @@ function main() {
     if (advice) {
       console.log(`\non the block: ${advice.player} (${advice.position}) at ${money(advice.currentBid)}`
         + ` -> ${advice.verdict.toUpperCase()}  walk-away ${money(advice.walkAway)}, ceiling ${money(advice.ceiling)}`);
+    }
+  }
+
+  if (targets.length) {
+    const inf = inflation(state, valuations).discretionary;
+    const plan = planFeasibility(state, targets, { valuations, inflation: inf });
+
+    console.log('\ntarget board');
+    for (const row of tierPressure(state, targets)) {
+      const flag = row.exhausted ? ' EXHAUSTED' : row.critical ? ' CRITICAL' : '';
+      console.log(`  tier ${row.tier}: ${padNum(row.open, 2)}/${row.total} open`
+        + `  won ${row.won} (${money(row.spent)})  lost ${row.lost}${flag}`);
+    }
+
+    const missed = targetStatus(state, targets)
+      .filter((t) => t.status === 'lost' && t.overshoot != null)
+      .sort((a, b) => b.overshoot - a.overshoot)
+      .slice(0, 5);
+    if (missed.length) {
+      console.log('  biggest misses: '
+        + missed.map((t) => `${t.name} (+${t.overshoot} over your ${money(t.maxPrice)})`).join(', '));
+    }
+
+    console.log(`\nplan: ${money(plan.plannedCost)} of targets for ${plan.plan.length} of `
+      + `${plan.openSlots} open slots, ${money(plan.budget)} available -- `
+      + (plan.feasible ? `${money(plan.headroom)} headroom` : `SHORT BY ${money(plan.shortfall)}`));
+    if (plan.unslotted.length) {
+      console.log(`  no slot for: ${plan.unslotted.map((t) => t.name).join(', ')}`);
     }
   }
 

@@ -78,6 +78,13 @@ function renderAdvice(snap) {
       el('div', {}, [el('span', { className: 'k' }, 'Walk away'), el('span', { className: 'v' }, money(a.walkAway))]),
       el('div', {}, [el('span', { className: 'k' }, 'Ceiling'), el('span', { className: 'v' }, money(a.ceiling))]),
     ]),
+    a.isTarget
+      ? el('p', { className: 'hint target-line' },
+        `On your board — tier ${a.targetTier}, your price ${money(a.targetPrice)}`
+        + (a.targetVsMarket != null && a.targetVsMarket !== 0
+          ? ` (${a.targetVsMarket > 0 ? '+' : ''}${a.targetVsMarket} vs market)` : '')
+        + (a.targetNote ? ` — ${a.targetNote}` : ''))
+      : el('p', { className: 'hint' }, 'Not on your target board.'),
     el('p', { className: 'hint' }, explain ?? ''),
     el('p', { className: 'hint' },
       `par ${money(a.parValue)} × inflation ${a.inflation} · cliff ${money(a.tierCliff)} to ${a.nextBest ?? 'nobody'} · `
@@ -204,10 +211,158 @@ function renderAlerts(snap) {
   }
 }
 
+
+// --- targets ----------------------------------------------------------------
+/** Local working copy, so an in-progress edit is not clobbered by a snapshot. */
+let editing = null;
+
+function saveTargets(rows) {
+  send({ kind: 'set-targets', targets: rows });
+}
+
+/** Current board as plain editable entries. */
+function boardEntries(snap) {
+  return snap.targetBoard.map((t) => ({
+    name: t.name, position: t.position, tier: t.tier, maxPrice: t.maxPrice, note: t.note,
+  }));
+}
+
+function renderPlan(snap) {
+  const box = $('#plan');
+  box.textContent = '';
+  const p = snap.plan;
+
+  if (!snap.targetBoard.length) {
+    box.append(el('p', { className: 'empty' },
+      'No targets yet. "Seed from CSV" builds a starting board from your valuations.'));
+    return;
+  }
+
+  box.append(
+    el('div', { className: 'numbers' }, [
+      el('div', {}, [el('span', { className: 'k' }, 'Plan cost'), el('span', { className: 'v' }, money(p.plannedCost))]),
+      el('div', {}, [el('span', { className: 'k' }, 'You have'), el('span', { className: 'v' }, money(p.budget))]),
+      el('div', {}, [
+        el('span', { className: 'k' }, p.feasible ? 'Headroom' : 'Short by'),
+        el('span', { className: `v ${p.feasible ? 'under' : 'over'}` },
+          money(p.feasible ? p.headroom : p.shortfall)),
+      ]),
+    ]),
+    el('p', { className: 'hint' }, p.feasible
+      ? `${p.plan.length} target${p.plan.length === 1 ? '' : 's'} fit your ${p.openSlots} open slot${p.openSlots === 1 ? '' : 's'}, `
+        + `with ${money(p.reserve)} held back at minimum bid.`
+      : `Your remaining targets cost ${money(p.required)} but you have ${money(p.budget)}. `
+        + 'Drop a tier, cut a price, or plan to find value late.'),
+  );
+
+  if (p.unslotted.length) {
+    box.append(el('p', { className: 'hint over' },
+      `No roster slot left for: ${p.unslotted.map((t) => t.name).join(', ')}`));
+  }
+}
+
+function renderTiers(snap) {
+  const box = $('#tiers');
+  box.textContent = '';
+  if (!snap.targetBoard.length) return;
+
+  const byTier = new Map();
+  for (const t of snap.targetBoard) {
+    if (!byTier.has(t.tier)) byTier.set(t.tier, []);
+    byTier.get(t.tier).push(t);
+  }
+  const pressure = Object.fromEntries(snap.tiers.map((row) => [row.tier, row]));
+
+  for (const tier of [...byTier.keys()].sort((a, b) => a - b)) {
+    const rows = byTier.get(tier).sort((a, b) => (b.maxPrice ?? 0) - (a.maxPrice ?? 0));
+    const info = pressure[tier] ?? {};
+
+    const heading = el('h2', {}, `Tier ${tier}`);
+    heading.append(el('span', {
+      className: `tierbadge ${info.exhausted ? 'gone' : info.critical ? 'critical' : ''}`,
+    }, info.exhausted ? 'gone' : `${info.open}/${info.total} left`));
+    box.append(heading);
+
+    const table = el('table', { className: 'grid targets' });
+    const tbody = el('tbody');
+
+    for (const t of rows) {
+      const priceInput = el('input', {
+        type: 'number', min: '0', className: 'price',
+        value: t.maxPrice ?? '',
+        disabled: t.status !== 'open',
+      });
+      // Commit on change, not on every keystroke, so a half-typed "4" of "45"
+      // never briefly becomes the live ceiling on the Live tab.
+      priceInput.addEventListener('change', () => {
+        const entries = boardEntries(snap);
+        const row = entries.find((e) => e.name === t.name && e.position === t.position);
+        if (row) row.maxPrice = priceInput.value === '' ? null : Number(priceInput.value);
+        saveTargets(entries);
+      });
+
+      const tierInput = el('input', {
+        type: 'number', min: '1', className: 'tier', value: t.tier,
+        disabled: t.status !== 'open',
+      });
+      tierInput.addEventListener('change', () => {
+        const entries = boardEntries(snap);
+        const row = entries.find((e) => e.name === t.name && e.position === t.position);
+        if (row) row.tier = Number(tierInput.value) || 1;
+        saveTargets(entries);
+      });
+
+      const status = t.status === 'won'
+        ? el('span', { className: 'tag won', title: `you paid ${money(t.soldFor)}` }, `won ${money(t.soldFor)}`)
+        : t.status === 'lost'
+          ? el('span', {
+            className: 'tag lost',
+            title: `${t.wonBy} paid ${money(t.soldFor)}`
+              + (t.overshoot != null ? ` (${t.overshoot >= 0 ? '+' : ''}${t.overshoot} vs your target)` : ''),
+          }, `lost ${money(t.soldFor)}`)
+          : el('button', { className: 'drop', title: 'remove from board' }, '×');
+
+      if (t.status === 'open') {
+        status.addEventListener('click', () => {
+          saveTargets(boardEntries(snap).filter((e) => !(e.name === t.name && e.position === t.position)));
+        });
+      }
+
+      // When auto-adjust is on, the effective price differs from what you
+      // typed; show it so the override is visible rather than surprising.
+      const effective = snap.autoAdjustTargets && t.effective != null && t.effective !== t.maxPrice
+        ? el('span', { className: 'eff', title: 'inflation-adjusted' }, `→${money(t.effective)}`)
+        : null;
+
+      tbody.append(el('tr', { className: t.status }, [
+        el('td', { title: t.name }, t.name),
+        el('td', {}, el('span', { className: 'pos' }, t.position ?? '—')),
+        el('td', { className: 'num' }, tierInput),
+        el('td', { className: 'num' }, effective ? [priceInput, effective] : priceInput),
+        el('td', { className: 'num', title: 'par value from your CSV' },
+          t.parValue != null ? money(t.parValue) : '—'),
+        el('td', {}, status),
+      ]));
+    }
+
+    table.append(
+      el('thead', {}, el('tr', {}, [
+        el('th', {}, 'Player'), el('th', {}, 'Pos'), el('th', { className: 'num' }, 'Tier'),
+        el('th', { className: 'num' }, 'Your $'), el('th', { className: 'num' }, 'Par'), el('th', {}, ''),
+      ])),
+      tbody,
+    );
+    box.append(table);
+  }
+}
+
 function render(snap) {
   latest = snap;
   renderStatus(snap);
   renderAdvice(snap);
+  renderPlan(snap);
+  renderTiers(snap);
+  $('#auto-adjust').checked = snap.autoAdjustTargets;
   renderHistory(snap);
   renderTeams(snap);
   renderMarket(snap);
@@ -255,6 +410,33 @@ form.addEventListener('submit', (ev) => {
 
 form.aggressiveness.addEventListener('input', (ev) => {
   $('#aggr-value').textContent = ev.target.value;
+});
+
+
+$('#add-target').addEventListener('click', () => {
+  const name = prompt('Player name?');
+  if (!name) return;
+  const position = prompt('Position? (QB/RB/WR/TE/K/DST)');
+  if (!position) return;
+  const tier = Number(prompt('Tier? (1 = top)', '1')) || 1;
+  const raw = prompt('Your max price? (blank = use par value)', '');
+  const maxPrice = raw === '' || raw == null ? null : Number(raw);
+
+  send({
+    kind: 'set-targets',
+    targets: [...boardEntries(latest), { name, position, tier, maxPrice }],
+  });
+});
+
+$('#seed-targets').addEventListener('click', async () => {
+  const result = await send({ kind: 'seed-targets', options: { topN: 60, tierCount: 6 } });
+  if (!result.count) {
+    alert('No valuations loaded yet — import a CSV in Setup first.');
+  }
+});
+
+$('#auto-adjust').addEventListener('change', (ev) => {
+  send({ kind: 'set-auto-adjust', value: ev.target.checked });
 });
 
 $('#csv-file').addEventListener('change', async (ev) => {
