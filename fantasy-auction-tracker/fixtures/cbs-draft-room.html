@@ -1,0 +1,84 @@
+<!--
+  A CBS Salary Cap draft room, RECONSTRUCTED.
+
+  This is NOT a capture of the real site. It is a hand-built page shaped the way
+  the `cbs` profile in src/adapters/profiles.js expects, deliberately made messy
+  in the ways real draft rooms are messy:
+
+    - a header row in the results table that parses to nothing
+    - prices written as "$58", "58" and " $7 " with stray whitespace
+    - a name with a suffix ("Marvin Harrison Jr.")
+    - a defense written as "D/ST" rather than "DST"
+    - a results row with no position cell at all
+    - nested markup around the values rather than flat text nodes
+
+  What the accompanying test proves: the DOM adapter correctly turns a page of
+  this SHAPE into draft events. What it does NOT prove: that these selectors
+  match the live CBS site. Only calibrating against a real mock draft can do
+  that -- see tools/selftest.js.
+-->
+<div class="draft-room">
+
+  <section class="auction-nomination">
+    <div class="player-block">
+      <a class="player-name" href="/players/1234">Ja'Marr Chase</a>
+      <span class="player-position">WR</span>
+      <span class="player-team">CIN</span>
+    </div>
+    <div class="bid-block">
+      <span class="current-bid">$47</span>
+      <span class="high-bidder">Gridiron Gurus</span>
+    </div>
+  </section>
+
+  <table class="draft-results">
+    <thead>
+      <tr class="header-row">
+        <th class="col">Player</th><th class="col">Pos</th><th class="col">Price</th><th class="col">Team</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="results-row">
+        <td><span class="player-name">Bijan Robinson</span></td>
+        <td><span class="player-position">RB</span></td>
+        <td><span class="bid-amount">$58</span></td>
+        <td><span class="team-name">Team Chaos</span></td>
+      </tr>
+      <tr class="results-row">
+        <td><span class="player-name">Marvin Harrison Jr.</span></td>
+        <td><span class="player-position">WR</span></td>
+        <td><span class="bid-amount">44</span></td>
+        <td><span class="team-name">Waiver Wire Warriors</span></td>
+      </tr>
+      <tr class="results-row">
+        <td><span class="player-name">San Francisco 49ers</span></td>
+        <td><span class="player-position">D/ST</span></td>
+        <td><span class="bid-amount"> $7 </span></td>
+        <td><span class="team-name">Team Chaos</span></td>
+      </tr>
+      <!-- No position cell: still a real sale, but unmatchable to a valuation. -->
+      <tr class="results-row">
+        <td><span class="player-name">Tucker Kraft</span></td>
+        <td></td>
+        <td><span class="bid-amount">$3</span></td>
+        <td><span class="team-name">Gridiron Gurus</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="team-budgets">
+    <div class="budget-row">
+      <span class="team-name">Team Chaos</span>
+      <span class="budget-remaining">$135</span>
+    </div>
+    <div class="budget-row">
+      <span class="team-name">Gridiron Gurus</span>
+      <span class="budget-remaining">$197</span>
+    </div>
+    <div class="budget-row">
+      <span class="team-name">Waiver Wire Warriors</span>
+      <span class="budget-remaining">$156</span>
+    </div>
+  </div>
+
+</div>
