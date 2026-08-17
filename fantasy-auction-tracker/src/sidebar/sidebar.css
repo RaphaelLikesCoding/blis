@@ -1,0 +1,151 @@
+/* Dense by design: a draft sidebar is ~350px wide and you read it in glances,
+   so information density beats whitespace. */
+
+:root {
+  --bg: #ffffff;
+  --fg: #14161a;
+  --muted: #5c6470;
+  --line: #dfe3e8;
+  --card: #f6f8fa;
+  --good: #10796b;
+  --warn: #a35a00;
+  --bad: #b3261e;
+  --accent: #1f5fd0;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #17191d;
+    --fg: #e8eaed;
+    --muted: #9aa3af;
+    --line: #2c3038;
+    --card: #1f2229;
+    --good: #4ec9b0;
+    --warn: #e2a03f;
+    --bad: #f2635a;
+    --accent: #6ea8fe;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+h1 { font-size: 13px; margin: 0; letter-spacing: .02em; }
+h2 { font-size: 11px; text-transform: uppercase; color: var(--muted); margin: 14px 10px 6px; letter-spacing: .06em; }
+
+.status {
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+.status.live { color: var(--good); border-color: var(--good); }
+.status.degraded { color: var(--warn); border-color: var(--warn); }
+
+.tabs { display: flex; border-bottom: 1px solid var(--line); }
+.tab {
+  flex: 1;
+  padding: 7px 4px;
+  font-size: 12px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.tab.active { color: var(--fg); border-bottom-color: var(--accent); }
+
+.panel { display: none; padding-bottom: 24px; }
+.panel.active { display: block; }
+
+.card {
+  margin: 10px;
+  padding: 10px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+/* Bid advice: the one thing you need readable at a glance mid-bidding. */
+.advice .player { font-size: 15px; font-weight: 600; }
+.advice .verdict {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  font-weight: 600;
+}
+.verdict.bid { background: var(--good); color: #fff; }
+.verdict.stretch { background: var(--warn); color: #fff; }
+.verdict.pass { background: var(--bad); color: #fff; }
+.verdict.unvalued, .verdict.no-slot { background: var(--muted); color: #fff; }
+
+.numbers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+.numbers div { text-align: center; }
+.numbers .k { display: block; font-size: 10px; color: var(--muted); text-transform: uppercase; }
+.numbers .v { font-size: 16px; font-variant-numeric: tabular-nums; }
+
+table.grid { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+table.grid th, table.grid td {
+  padding: 4px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+table.grid th { font-size: 10px; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+table.grid td.num, table.grid th.num { text-align: right; }
+tr.me { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+tr.broke td { color: var(--muted); }
+
+.pos { font-size: 10px; padding: 1px 4px; border-radius: 3px; background: var(--line); }
+.over { color: var(--bad); }
+.under { color: var(--good); }
+
+.hint { color: var(--muted); font-size: 11px; margin: 6px 10px; }
+.empty { color: var(--muted); margin: 0; }
+
+.form { display: flex; flex-direction: column; gap: 6px; padding: 0 10px; }
+.form label { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; }
+.form input { flex: 1; min-width: 0; padding: 3px 5px; background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 4px; }
+button {
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--card);
+  color: var(--fg);
+  cursor: pointer;
+  font-size: 12px;
+}
+button:hover { border-color: var(--accent); }
+button.danger { color: var(--bad); }
+.row { display: flex; gap: 6px; padding: 0 10px; flex-wrap: wrap; }
+
+.alert {
+  margin: 6px 10px;
+  padding: 6px 8px;
+  border-left: 3px solid var(--warn);
+  background: var(--card);
+  font-size: 11px;
+}
+.alert.review { border-left-color: var(--bad); }
+.alert button { margin-left: 6px; padding: 1px 6px; font-size: 10px; }

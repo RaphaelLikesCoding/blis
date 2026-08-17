@@ -1,0 +1,16 @@
+{
+  "name": "fantasy-auction-tracker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Firefox add-on that tracks a fantasy football auction draft in real time and layers analytics on top.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "replay": "node tools/replay.js",
+    "package": "cd . && zip -r -FS ../auction-tracker.zip manifest.json src -x '*.DS_Store'"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  }
+}

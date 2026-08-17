@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Auction Tracker</title>
+  <link rel="stylesheet" href="sidebar.css">
+</head>
+<body>
+  <header>
+    <h1>Auction Tracker</h1>
+    <span id="status" class="status" title="Detection layer feeding the tracker">idle</span>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-panel="live" role="tab">Live</button>
+    <button class="tab" data-panel="teams" role="tab">Teams</button>
+    <button class="tab" data-panel="market" role="tab">Market</button>
+    <button class="tab" data-panel="setup" role="tab">Setup</button>
+  </nav>
+
+  <!-- LIVE -->
+  <section id="panel-live" class="panel active">
+    <div id="advice" class="card advice">
+      <p class="empty">Nothing on the block.</p>
+    </div>
+
+    <h2>Recent sales</h2>
+    <table class="grid" id="history">
+      <thead><tr><th>Player</th><th>Pos</th><th>Team</th><th class="num">$</th><th class="num">vs par</th></tr></thead>
+      <tbody></tbody>
+    </table>
+
+    <div id="alerts"></div>
+  </section>
+
+  <!-- TEAMS -->
+  <section id="panel-teams" class="panel">
+    <table class="grid" id="teams">
+      <thead>
+        <tr><th>Team</th><th class="num">Left</th><th class="num">Slots</th><th class="num">Max bid</th><th>Needs</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <p class="hint">Max bid = money left minus $1 held back for every other open slot. That is the real ceiling a rival can reach.</p>
+  </section>
+
+  <!-- MARKET -->
+  <section id="panel-market" class="panel">
+    <div id="inflation" class="card"></div>
+    <h2>Positional scarcity</h2>
+    <table class="grid" id="scarcity">
+      <thead><tr><th>Pos</th><th class="num">Startable left</th><th class="num">Slots to fill</th><th class="num">Ratio</th><th>Best available</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <h2>Budget pressure</h2>
+    <table class="grid" id="pressure">
+      <thead><tr><th>Team</th><th class="num">Left</th><th class="num">Slots</th><th class="num">Locked</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p class="hint">Teams high on "locked" are nearly forced into $1 bids. Nominate players you do <em>not</em> want while the field can still pay.</p>
+  </section>
+
+  <!-- SETUP -->
+  <section id="panel-setup" class="panel">
+    <h2>League</h2>
+    <form id="config-form" class="form">
+      <label>Teams <input type="number" name="numTeams" min="2" max="32" required></label>
+      <label>Budget <input type="number" name="budget" min="1" required></label>
+      <label>Min bid <input type="number" name="minBid" min="1" required></label>
+      <label>Roster slots
+        <input type="text" name="rosterSlots" placeholder="QB,RB,RB,WR,WR,WR,TE,FLEX,K,DST,BN x6">
+      </label>
+      <label>My team id <input type="text" name="myTeamId" placeholder="exact name as shown in the draft room"></label>
+      <label>Aggressiveness
+        <input type="range" name="aggressiveness" min="0" max="1" step="0.1">
+        <span id="aggr-value"></span>
+      </label>
+      <button type="submit">Save league settings</button>
+    </form>
+
+    <h2>Valuations</h2>
+    <p class="hint">CSV with player, position and auction value columns. Values are rescaled to your league's total money automatically.</p>
+    <input type="file" id="csv-file" accept=".csv,text/csv">
+    <p id="csv-status" class="hint"></p>
+
+    <h2>Draft data</h2>
+    <div class="row">
+      <button id="export-log">Export draft log</button>
+      <button id="export-capture">Export WS capture</button>
+      <button id="reset" class="danger">Reset draft</button>
+    </div>
+    <p class="hint">
+      Export the WS capture after a mock draft to build an exact parser for your
+      platform. Until a mapping exists the tracker relies on the DOM layer.
+    </p>
+
+    <h2>Manual entry</h2>
+    <p class="hint">Fallback when a sale is missed or misread.</p>
+    <form id="manual-form" class="form">
+      <label>Player <input type="text" name="playerName" required></label>
+      <label>Pos <input type="text" name="position" required placeholder="RB"></label>
+      <label>Team <input type="text" name="teamId" required></label>
+      <label>Price <input type="number" name="price" min="0" required></label>
+      <button type="submit">Record sale</button>
+    </form>
+  </section>
+
+  <script type="module" src="sidebar.js"></script>
+</body>
+</html>
